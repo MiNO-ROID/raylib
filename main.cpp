@@ -1,13 +1,6 @@
 #include <raylib.h>
 #include <cmath>
-#define MAX_BULLETS 200
 #define MAX_ENEMIES 20
-
-struct Bullet {
-    Vector2 position;
-    Vector2 velocity;
-    bool active;
-};
 
 struct Enemy {
     Vector2 position;
@@ -17,7 +10,7 @@ struct Enemy {
 int main() {
     const int screenWidth = 800;
     const int screenHeight = 600;
-    InitWindow(screenWidth, screenHeight, "Shoot");
+    InitWindow(screenWidth, screenHeight, "Slash");
     ToggleBorderlessWindowed();
     Vector2 ballPosition = {(float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2};
     SetTargetFPS(60);
@@ -26,11 +19,11 @@ int main() {
     Texture2D warriorIdleTex   = LoadTexture("../pack 1/Units/Blue Units/Warrior/Warrior_Idle.png");
     Texture2D warriorAttackTex = LoadTexture("../pack 1/Units/Blue Units/Warrior/Warrior_Attack1.png");
 
-    int idleFrameWidth   = warriorIdleTex.width / 8;   // 8 idle frames
-    int attackFrameWidth = warriorAttackTex.width / 4;  // 4 attack frames
+    int idleFrameWidth   = warriorIdleTex.width / 8;
+    int attackFrameWidth = warriorAttackTex.width / 4;
     int frameHeight      = warriorIdleTex.height;
     int drawSize         = 200;
-    int drawOffset       = drawSize / 2;  // 100 — centers sprite on ballPosition
+    int drawOffset       = drawSize / 2;
 
     int currentFrame = 0;
     int frameTimer   = 0;
@@ -41,13 +34,10 @@ int main() {
     int  slashFrame      = 0;
     int  slashTimer      = 0;
     int  slashFrameSpeed = 5;
-    float slashRange     = 45.0f;  // tight melee range — bullets fire at anything beyond this
+    float slashRange     = 45.0f;
 
-    Bullet bullets[MAX_BULLETS] = {};
-    Enemy  enemies[MAX_ENEMIES] = {};
+    Enemy enemies[MAX_ENEMIES] = {};
 
-    int shootTimer         = 0;
-    int shootCooldown      = 15;
     int spawnTimer         = 0;
     int spawnCooldown      = 30;
     int maxHP              = 1;
@@ -66,7 +56,7 @@ int main() {
             if (IsKeyDown(KEY_S)) ballPosition.y += 4.0f;
             if (IsKeyDown(KEY_W)) ballPosition.y -= 4.0f;
 
-            // --- SLASH: auto-trigger when enemy enters melee range ---
+            // SLASH: auto-trigger when enemy enters melee range
             if (!isSlashing) {
                 for (int i = 0; i < MAX_ENEMIES; i++) {
                     if (enemies[i].active) {
@@ -77,7 +67,6 @@ int main() {
                             isSlashing = true;
                             slashFrame = 0;
                             slashTimer = 0;
-                            shootTimer = 0;
                             break;
                         }
                     }
@@ -116,51 +105,12 @@ int main() {
                 frameTimer   = 0;
             }
 
-            // Idle animation (only when not slashing)
+            // Idle animation
             if (!isSlashing) {
                 frameTimer++;
                 if (frameTimer >= frameSpeed) {
                     frameTimer = 0;
                     currentFrame = (currentFrame + 1) % 8;
-                }
-            }
-
-            // Auto shoot — blocked while slashing, only targets enemies outside slash range
-            if (!isSlashing) {
-                shootTimer++;
-                if (shootTimer >= shootCooldown) {
-                    int   nearestIndex = -1;
-                    float nearestDist  = 250.0f;
-
-                    for (int i = 0; i < MAX_ENEMIES; i++) {
-                        if (enemies[i].active) {
-                            float dx   = enemies[i].position.x - ballPosition.x;
-                            float dy   = enemies[i].position.y - ballPosition.y;
-                            float dist = sqrt(dx * dx + dy * dy);
-                            if (dist < nearestDist && dist > slashRange) {
-                                nearestDist  = dist;
-                                nearestIndex = i;
-                            }
-                        }
-                    }
-
-                    if (nearestIndex != -1) {
-                        shootTimer = 0;
-                        float dx     = enemies[nearestIndex].position.x - ballPosition.x;
-                        float dy     = enemies[nearestIndex].position.y - ballPosition.y;
-                        float length = sqrt(dx * dx + dy * dy);
-                        float speed  = 12.0f;
-                        Vector2 velocity = {(dx / length) * speed, (dy / length) * speed};
-
-                        for (int i = 0; i < MAX_BULLETS; i++) {
-                            if (!bullets[i].active) {
-                                bullets[i].position = ballPosition;
-                                bullets[i].velocity = velocity;
-                                bullets[i].active   = true;
-                                break;
-                            }
-                        }
-                    }
                 }
             }
 
@@ -210,29 +160,6 @@ int main() {
                             if (playerHP <= 0) gameOver = true;
                         }
                     }
-
-                    for (int j = 0; j < MAX_BULLETS; j++) {
-                        if (bullets[j].active) {
-                            if (CheckCollisionCircles(enemies[i].position, 20, bullets[j].position, 8)) {
-                                enemies[i].active = false;
-                                bullets[j].active = false;
-                                score++;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Update bullets
-            for (int i = 0; i < MAX_BULLETS; i++) {
-                if (bullets[i].active) {
-                    bullets[i].position.x += bullets[i].velocity.x;
-                    bullets[i].position.y += bullets[i].velocity.y;
-                    if (bullets[i].position.y < -2000 || bullets[i].position.y > GetScreenHeight() + 2000 ||
-                        bullets[i].position.x < -2000 || bullets[i].position.x > GetScreenWidth() + 2000) {
-                        bullets[i].active = false;
-                    }
                 }
             }
         }
@@ -247,14 +174,12 @@ int main() {
                 score           = 0;
                 invincibleTimer = 0;
                 spawnTimer      = 0;
-                shootTimer      = 0;
                 currentFrame    = 0;
                 frameTimer      = 0;
                 isSlashing      = false;
                 slashFrame      = 0;
                 gameOver        = false;
                 for (int i = 0; i < MAX_ENEMIES; i++) enemies[i].active = false;
-                for (int i = 0; i < MAX_BULLETS; i++) bullets[i].active = false;
             }
         }
 
@@ -263,7 +188,7 @@ int main() {
         ClearBackground(RAYWHITE);
 
         if (!gameOver) {
-            // Debug slash range circle — remove when happy with it
+            // Debug slash range circle - remove when done
             DrawCircleLines((int)ballPosition.x, (int)ballPosition.y, slashRange, BLUE);
 
             Color tint = (invincibleTimer > 0 && (invincibleTimer / 6) % 2 == 0) ? RED : WHITE;
@@ -281,11 +206,6 @@ int main() {
             // Enemies
             for (int i = 0; i < MAX_ENEMIES; i++) {
                 if (enemies[i].active) DrawCircleV(enemies[i].position, 20, RED);
-            }
-
-            // Bullets
-            for (int i = 0; i < MAX_BULLETS; i++) {
-                if (bullets[i].active) DrawCircleV(bullets[i].position, 8, ORANGE);
             }
 
             // HP bar
