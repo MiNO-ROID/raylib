@@ -22,13 +22,13 @@ int main() {
     Vector2 ballPosition = {(float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2};
     SetTargetFPS(60);
 
-    // Load warrior sprite sheet
-    Texture2D warriorTex = LoadTexture("pack 1/Units/Blue Units/Warrior/Warrior_Idle.png");
-    int frameWidth = warriorTex.width / 8;  // 8 frames in idle sheet
+    //Load Warrior
+    Texture2D warriorTex = LoadTexture("../pack 1/Units/Blue Units/Warrior/Warrior_Idle.png");
+    int frameWidth = warriorTex.width / 8;
     int frameHeight = warriorTex.height;
     int currentFrame = 0;
     int frameTimer = 0;
-    int frameSpeed = 8; // frames per animation frame (lower = faster)
+    int frameSpeed = 8;
 
     Bullet bullets[MAX_BULLETS] = {};
     Enemy enemies[MAX_ENEMIES] = {};
@@ -64,7 +64,7 @@ int main() {
             shootTimer++;
             if (shootTimer >= shootCooldown) {
                 int nearestIndex = -1;
-                float nearestDist = 9999.0f;
+                float nearestDist = 250.0f;
 
                 for (int i = 0; i < MAX_ENEMIES; i++) {
                     if (enemies[i].active) {
@@ -191,14 +191,14 @@ int main() {
             }
         }
 
-        // ---- DRAW ----
+        // DRAW
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
         if (!gameOver) {
             // Draw animated warrior sprite
             Rectangle srcRect = {(float)(currentFrame * frameWidth), 0, (float)frameWidth, (float)frameHeight};
-            Rectangle destRect = {ballPosition.x - 40, ballPosition.y - 40, 80, 80};
+            Rectangle destRect = {ballPosition.x - 40, ballPosition.y - 40, 200, 200};
             Color tint = (invincibleTimer > 0 && (invincibleTimer / 6) % 2 == 0) ? RED : WHITE;
             DrawTexturePro(warriorTex, srcRect, destRect, {0, 0}, 0.0f, tint);
 
