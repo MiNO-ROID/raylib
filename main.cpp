@@ -17,10 +17,12 @@ int main() {
 
     // Load warrior sprites
     Texture2D warriorIdleTex   = LoadTexture("../pack 1/Units/Blue Units/Warrior/Warrior_Idle.png");
+    Texture2D warriorRunTex    = LoadTexture("../pack 1/Units/Blue Units/Warrior/Warrior_Run.png");
     Texture2D warriorAttackTex = LoadTexture("../pack 1/Units/Blue Units/Warrior/Warrior_Attack1.png");
 
-    int idleFrameWidth   = warriorIdleTex.width / 8;
-    int attackFrameWidth = warriorAttackTex.width / 4;
+    int idleFrameWidth   = warriorIdleTex.width / 8;   // 8 frames
+    int runFrameWidth    = warriorRunTex.width  / 6;   // 6 frames
+    int attackFrameWidth = warriorAttackTex.width / 4; // 4 frames
     int frameHeight      = warriorIdleTex.height;
     int drawSize         = 200;
     int drawOffset       = drawSize / 2;
@@ -34,7 +36,6 @@ int main() {
     int  slashFrame      = 0;
     int  slashTimer      = 0;
     int  slashFrameSpeed = 5;
-    // Must be bigger than the player touch radius (40) so slash fires BEFORE enemy touches you
     float slashRange     = 80.0f;
 
     Enemy enemies[MAX_ENEMIES] = {};
@@ -51,13 +52,15 @@ int main() {
     while (!WindowShouldClose()) {
 
         if (!gameOver) {
-            // Movement
-            if (IsKeyDown(KEY_D)) ballPosition.x += 4.0f;
-            if (IsKeyDown(KEY_A)) ballPosition.x -= 4.0f;
-            if (IsKeyDown(KEY_S)) ballPosition.y += 4.0f;
-            if (IsKeyDown(KEY_W)) ballPosition.y -= 4.0f;
+            bool isMoving = false;
 
-            // SLASH
+            // Movement
+            if (IsKeyDown(KEY_D)) { ballPosition.x += 4.0f; isMoving = true; }
+            if (IsKeyDown(KEY_A)) { ballPosition.x -= 4.0f; isMoving = true; }
+            if (IsKeyDown(KEY_S)) { ballPosition.y += 4.0f; isMoving = true; }
+            if (IsKeyDown(KEY_W)) { ballPosition.y -= 4.0f; isMoving = true; }
+
+            // SLASH: trigger when any enemy enters melee range
             if (!isSlashing) {
                 for (int i = 0; i < MAX_ENEMIES; i++) {
                     if (enemies[i].active) {
@@ -74,14 +77,13 @@ int main() {
                 }
             }
 
-            // slash animation
+            // Advance slash animation
             if (isSlashing) {
                 slashTimer++;
                 if (slashTimer >= slashFrameSpeed) {
                     slashTimer = 0;
                     slashFrame++;
 
-                    // Kill enemies in range on frame 2 (midpoint of swing)
                     if (slashFrame == 2) {
                         for (int i = 0; i < MAX_ENEMIES; i++) {
                             if (enemies[i].active) {
@@ -101,20 +103,20 @@ int main() {
                         slashFrame = 0;
                     }
                 }
-
                 currentFrame = 0;
                 frameTimer   = 0;
             }
 
-            // Idle animation
+            // Idle / Run animation (only when not slashing)
             if (!isSlashing) {
+                int maxFrames = isMoving ? 6 : 8;
                 frameTimer++;
                 if (frameTimer >= frameSpeed) {
                     frameTimer = 0;
-                    currentFrame = (currentFrame + 1) % 8;
+                    currentFrame = (currentFrame + 1) % maxFrames;
                 }
             }
- 
+
             // Spawn enemy
             spawnTimer++;
             if (spawnTimer >= spawnCooldown) {
@@ -139,7 +141,6 @@ int main() {
                 }
             }
 
-            // Invincible countdown
             if (invincibleTimer > 0) invincibleTimer--;
 
             // Update enemies
@@ -153,7 +154,6 @@ int main() {
                         enemies[i].position.y += (dy / length) * 2.0f;
                     }
 
-                    // Only take damage from touch if NOT slashing (slash should kill them first)
                     if (!isSlashing && invincibleTimer == 0) {
                         if (CheckCollisionCircles(enemies[i].position, 20, ballPosition, 30)) {
                             playerHP--;
@@ -190,36 +190,39 @@ int main() {
         ClearBackground(RAYWHITE);
 
         if (!gameOver) {
-            // Debug slash range circle - remove when done
             DrawCircleLines((int)ballPosition.x, (int)ballPosition.y, slashRange, BLUE);
 
             Color tint = (invincibleTimer > 0 && (invincibleTimer / 6) % 2 == 0) ? RED : WHITE;
+            bool isMovingDraw = IsKeyDown(KEY_W) || IsKeyDown(KEY_A) || IsKeyDown(KEY_S) || IsKeyDown(KEY_D);
 
             if (isSlashing) {
                 Rectangle srcRect  = {(float)(slashFrame * attackFrameWidth), 0, (float)attackFrameWidth, (float)frameHeight};
                 Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
                 DrawTexturePro(warriorAttackTex, srcRect, destRect, {0, 0}, 0.0f, tint);
+            } else if (isMovingDraw) {
+                Rectangle srcRect  = {(float)(currentFrame * runFrameWidth), 0, (float)runFrameWidth, (float)frameHeight};
+                Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
+                DrawTexturePro(warriorRunTex, srcRect, destRect, {0, 0}, 0.0f, tint);
             } else {
                 Rectangle srcRect  = {(float)(currentFrame * idleFrameWidth), 0, (float)idleFrameWidth, (float)frameHeight};
                 Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
                 DrawTexturePro(warriorIdleTex, srcRect, destRect, {0, 0}, 0.0f, tint);
             }
 
-            // Draw slash state on screen for debugging
-            DrawText(isSlashing ? "SLASHING" : "IDLE", 10, 75, 20, isSlashing ? GREEN : DARKGRAY);
+            // Debug state label
+            const char* stateLabel = isSlashing ? "SLASHING" : (isMovingDraw ? "RUNNING" : "IDLE");
+            Color stateColor = isSlashing ? GREEN : (isMovingDraw ? ORANGE : DARKGRAY);
+            DrawText(stateLabel, 10, 75, 20, stateColor);
 
-            // Enemies
             for (int i = 0; i < MAX_ENEMIES; i++) {
                 if (enemies[i].active) DrawCircleV(enemies[i].position, 20, RED);
             }
 
-            // HP bar
             DrawText("HP:", 10, 10, 24, DARKGRAY);
             for (int i = 0; i < maxHP; i++) {
                 Color hpColor = (i < playerHP) ? RED : LIGHTGRAY;
                 DrawCircle(70 + i * 35, 22, 12, hpColor);
             }
-
             DrawText(TextFormat("Score: %d", score), 10, 45, 24, DARKGRAY);
         }
 
@@ -237,6 +240,7 @@ int main() {
     }
 
     UnloadTexture(warriorIdleTex);
+    UnloadTexture(warriorRunTex);
     UnloadTexture(warriorAttackTex);
     CloseWindow();
     return 0;
