@@ -18,7 +18,8 @@ int main() {
     const int screenWidth = 800;
     const int screenHeight = 600;
     InitWindow(screenWidth, screenHeight, "Shoot");
-    Vector2 ballPosition = {(float)screenWidth / 2, (float)screenHeight / 2};
+    ToggleBorderlessWindowed();
+    Vector2 ballPosition = {(float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2};
     SetTargetFPS(60);
 
     Bullet bullets[MAX_BULLETS] = {};
@@ -28,7 +29,7 @@ int main() {
     int shootCooldown = 15;
     int spawnTimer = 0;
     int spawnCooldown = 30;
-    int maxHP = 3;
+    int maxHP = 1;
     int playerHP = maxHP;
     int invincibleTimer = 0;
     int invincibleCooldown = 60;
@@ -44,17 +45,35 @@ int main() {
             if (IsKeyDown(KEY_S)) ballPosition.y += 4.0f;
             if (IsKeyDown(KEY_W)) ballPosition.y -= 4.0f;
 
-            // Shoot
+            // Auto shoot
             shootTimer++;
             if (shootTimer >= shootCooldown) {
-                shootTimer = 0;
-                Vector2 mouse = GetMousePosition();
-                float dx = mouse.x - ballPosition.x;
-                float dy = mouse.y - ballPosition.y;
-                float length = sqrt(dx * dx + dy * dy);
-                if (length > 0) {
+
+                // Find nearest enemy
+                int nearestIndex = -1;
+                float nearestDist = 150.0f; // detection range
+
+                for (int i = 0; i < MAX_ENEMIES; i++) {
+                    if (enemies[i].active) {
+                        float dx = enemies[i].position.x - ballPosition.x;
+                        float dy = enemies[i].position.y - ballPosition.y;
+                        float dist = sqrt(dx * dx + dy * dy);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestIndex = i;
+                        }
+                    }
+                }
+
+                // Only shoot if enemy found in range
+                if (nearestIndex != -1) {
+                    shootTimer = 0;
+                    float dx = enemies[nearestIndex].position.x - ballPosition.x;
+                    float dy = enemies[nearestIndex].position.y - ballPosition.y;
+                    float length = sqrt(dx * dx + dy * dy);
                     float speed = 12.0f;
                     Vector2 velocity = {(dx / length) * speed, (dy / length) * speed};
+
                     for (int i = 0; i < MAX_BULLETS; i++) {
                         if (!bullets[i].active) {
                             bullets[i].position = ballPosition;
@@ -128,12 +147,13 @@ int main() {
                 }
             }
 
+            // Update bullets
             for (int i = 0; i < MAX_BULLETS; i++) {
                 if (bullets[i].active) {
                     bullets[i].position.x += bullets[i].velocity.x;
                     bullets[i].position.y += bullets[i].velocity.y;
-                    if (bullets[i].position.y < -2000 || bullets[i].position.y > screenHeight + 2000 ||
-                        bullets[i].position.x < -2000 || bullets[i].position.x > screenWidth + 2000) {
+                    if (bullets[i].position.y < -2000 || bullets[i].position.y > GetScreenHeight() + 2000 ||
+                        bullets[i].position.x < -2000 || bullets[i].position.x > GetScreenWidth() + 2000) {
                         bullets[i].active = false;
                     }
                 }
@@ -142,11 +162,11 @@ int main() {
 
         // Restart
         if (gameOver) {
-            Rectangle restartBtn = {(float)screenWidth / 2 - 80, (float)screenHeight / 2 + 60, 160, 45};
+            Rectangle restartBtn = {(float)GetScreenWidth() / 2 - 80, (float)GetScreenHeight() / 2 + 60, 160, 45};
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
                 CheckCollisionPointRec(GetMousePosition(), restartBtn)) {
-                ballPosition = {(float)screenWidth / 2, (float)screenHeight / 2};
-                playerHP = 5;
+                ballPosition = {(float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2};
+                playerHP = maxHP;
                 score = 0;
                 invincibleTimer = 0;
                 spawnTimer = 0;
@@ -157,6 +177,7 @@ int main() {
             }
         }
 
+        // DRAW
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
@@ -188,13 +209,13 @@ int main() {
 
         // Game over screen
         if (gameOver) {
-            DrawText("GAME OVER", screenWidth / 2 - 130, screenHeight / 2 - 60, 50, RED);
-            DrawText(TextFormat("Score: %d", score), screenWidth / 2 - 60, screenHeight / 2, 30, DARKGRAY);
+            DrawText("GAME OVER", GetScreenWidth() / 2 - 130, GetScreenHeight() / 2 - 60, 50, RED);
+            DrawText(TextFormat("Score: %d", score), GetScreenWidth() / 2 - 60, GetScreenHeight() / 2, 30, DARKGRAY);
 
-            Rectangle restartBtn = {(float)screenWidth / 2 - 80, (float)screenHeight / 2 + 60, 160, 45};
+            Rectangle restartBtn = {(float)GetScreenWidth() / 2 - 80, (float)GetScreenHeight() / 2 + 60, 160, 45};
             Color btnColor = CheckCollisionPointRec(GetMousePosition(), restartBtn) ? DARKGREEN : GRAY;
             DrawRectangleRec(restartBtn, btnColor);
-            DrawText("RESTART", screenWidth / 2 - 52, screenHeight / 2 + 73, 20, WHITE);
+            DrawText("RESTART", GetScreenWidth() / 2 - 52, GetScreenHeight() / 2 + 73, 20, WHITE);
         }
 
         EndDrawing();
