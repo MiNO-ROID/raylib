@@ -34,13 +34,14 @@ int main() {
     int  slashFrame      = 0;
     int  slashTimer      = 0;
     int  slashFrameSpeed = 5;
-    float slashRange     = 45.0f;
+    // Must be bigger than the player touch radius (40) so slash fires BEFORE enemy touches you
+    float slashRange     = 80.0f;
 
     Enemy enemies[MAX_ENEMIES] = {};
 
     int spawnTimer         = 0;
     int spawnCooldown      = 30;
-    int maxHP              = 1;
+    int maxHP              = 3;
     int playerHP           = maxHP;
     int invincibleTimer    = 0;
     int invincibleCooldown = 60;
@@ -56,7 +57,7 @@ int main() {
             if (IsKeyDown(KEY_S)) ballPosition.y += 4.0f;
             if (IsKeyDown(KEY_W)) ballPosition.y -= 4.0f;
 
-            // SLASH: auto-trigger when enemy enters melee range
+            // SLASH: trigger when any enemy enters melee range
             if (!isSlashing) {
                 for (int i = 0; i < MAX_ENEMIES; i++) {
                     if (enemies[i].active) {
@@ -80,7 +81,7 @@ int main() {
                     slashTimer = 0;
                     slashFrame++;
 
-                    // Deal damage on frame 2 (midpoint of swing)
+                    // Kill enemies in range on frame 2 (midpoint of swing)
                     if (slashFrame == 2) {
                         for (int i = 0; i < MAX_ENEMIES; i++) {
                             if (enemies[i].active) {
@@ -152,8 +153,9 @@ int main() {
                         enemies[i].position.y += (dy / length) * 2.0f;
                     }
 
-                    if (invincibleTimer == 0) {
-                        if (CheckCollisionCircles(enemies[i].position, 20, ballPosition, 40)) {
+                    // Only take damage from touch if NOT slashing (slash should kill them first)
+                    if (!isSlashing && invincibleTimer == 0) {
+                        if (CheckCollisionCircles(enemies[i].position, 20, ballPosition, 30)) {
                             playerHP--;
                             invincibleTimer = invincibleCooldown;
                             enemies[i].active = false;
@@ -202,6 +204,9 @@ int main() {
                 Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
                 DrawTexturePro(warriorIdleTex, srcRect, destRect, {0, 0}, 0.0f, tint);
             }
+
+            // Draw slash state on screen for debugging
+            DrawText(isSlashing ? "SLASHING" : "IDLE", 10, 75, 20, isSlashing ? GREEN : DARKGRAY);
 
             // Enemies
             for (int i = 0; i < MAX_ENEMIES; i++) {
