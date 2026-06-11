@@ -20,9 +20,9 @@ int main() {
     Texture2D warriorRunTex    = LoadTexture("../pack 1/Units/Blue Units/Warrior/Warrior_Run.png");
     Texture2D warriorAttackTex = LoadTexture("../pack 1/Units/Blue Units/Warrior/Warrior_Attack1.png");
 
-    int idleFrameWidth   = warriorIdleTex.width / 8;   // 8 frames
-    int runFrameWidth    = warriorRunTex.width  / 6;   // 6 frames
-    int attackFrameWidth = warriorAttackTex.width / 4; // 4 frames
+    int idleFrameWidth   = warriorIdleTex.width / 8;
+    int runFrameWidth    = warriorRunTex.width  / 6;
+    int attackFrameWidth = warriorAttackTex.width / 4;
     int frameHeight      = warriorIdleTex.height;
     int drawSize         = 200;
     int drawOffset       = drawSize / 2;
@@ -30,6 +30,9 @@ int main() {
     int currentFrame = 0;
     int frameTimer   = 0;
     int frameSpeed   = 8;
+
+    // facing: true = right (default), false = left
+    bool facingRight = true;
 
     // Slash state
     bool isSlashing      = false;
@@ -54,13 +57,14 @@ int main() {
         if (!gameOver) {
             bool isMoving = false;
 
-            // Movement
-            if (IsKeyDown(KEY_D)) { ballPosition.x += 4.0f; isMoving = true; }
-            if (IsKeyDown(KEY_A)) { ballPosition.x -= 4.0f; isMoving = true; }
+            // Movement — update facing direction on horizontal input
+            if (IsKeyDown(KEY_D)) { ballPosition.x += 4.0f; isMoving = true; facingRight = true; }
+            if (IsKeyDown(KEY_A)) { ballPosition.x -= 4.0f; isMoving = true; facingRight = false; }
             if (IsKeyDown(KEY_S)) { ballPosition.y += 4.0f; isMoving = true; }
             if (IsKeyDown(KEY_W)) { ballPosition.y -= 4.0f; isMoving = true; }
 
             // SLASH: trigger when any enemy enters melee range
+            // Also update facing toward the nearest enemy when slashing
             if (!isSlashing) {
                 for (int i = 0; i < MAX_ENEMIES; i++) {
                     if (enemies[i].active) {
@@ -68,9 +72,10 @@ int main() {
                         float dy   = enemies[i].position.y - ballPosition.y;
                         float dist = sqrt(dx * dx + dy * dy);
                         if (dist < slashRange) {
-                            isSlashing = true;
-                            slashFrame = 0;
-                            slashTimer = 0;
+                            isSlashing   = true;
+                            slashFrame   = 0;
+                            slashTimer   = 0;
+                            facingRight  = (dx >= 0); // face the enemy you're slashing
                             break;
                         }
                     }
@@ -107,7 +112,7 @@ int main() {
                 frameTimer   = 0;
             }
 
-            // Idle / Run animation (only when not slashing)
+            // Idle / Run animation
             if (!isSlashing) {
                 int maxFrames = isMoving ? 6 : 8;
                 frameTimer++;
@@ -180,6 +185,7 @@ int main() {
                 frameTimer      = 0;
                 isSlashing      = false;
                 slashFrame      = 0;
+                facingRight     = true;
                 gameOver        = false;
                 for (int i = 0; i < MAX_ENEMIES; i++) enemies[i].active = false;
             }
@@ -195,18 +201,23 @@ int main() {
             Color tint = (invincibleTimer > 0 && (invincibleTimer / 6) % 2 == 0) ? RED : WHITE;
             bool isMovingDraw = IsKeyDown(KEY_W) || IsKeyDown(KEY_A) || IsKeyDown(KEY_S) || IsKeyDown(KEY_D);
 
+            // Negative width in srcRect = horizontal flip (raylib trick)
+            float flip = facingRight ? 1.0f : -1.0f;
+
+            auto drawSprite = [&](Texture2D& tex, int fw, int frame) {
+                // When flipping, start x at the right edge of the frame and use negative width
+                float srcX = facingRight ? (float)(frame * fw) : (float)((frame + 1) * fw);
+                Rectangle srcRect  = {srcX, 0, flip * fw, (float)frameHeight};
+                Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
+                DrawTexturePro(tex, srcRect, destRect, {0, 0}, 0.0f, tint);
+            };
+
             if (isSlashing) {
-                Rectangle srcRect  = {(float)(slashFrame * attackFrameWidth), 0, (float)attackFrameWidth, (float)frameHeight};
-                Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
-                DrawTexturePro(warriorAttackTex, srcRect, destRect, {0, 0}, 0.0f, tint);
+                drawSprite(warriorAttackTex, attackFrameWidth, slashFrame);
             } else if (isMovingDraw) {
-                Rectangle srcRect  = {(float)(currentFrame * runFrameWidth), 0, (float)runFrameWidth, (float)frameHeight};
-                Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
-                DrawTexturePro(warriorRunTex, srcRect, destRect, {0, 0}, 0.0f, tint);
+                drawSprite(warriorRunTex, runFrameWidth, currentFrame);
             } else {
-                Rectangle srcRect  = {(float)(currentFrame * idleFrameWidth), 0, (float)idleFrameWidth, (float)frameHeight};
-                Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
-                DrawTexturePro(warriorIdleTex, srcRect, destRect, {0, 0}, 0.0f, tint);
+                drawSprite(warriorIdleTex, idleFrameWidth, currentFrame);
             }
 
             // Debug state label
