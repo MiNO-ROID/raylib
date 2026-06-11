@@ -28,7 +28,8 @@ int main() {
     int shootCooldown = 15;
     int spawnTimer = 0;
     int spawnCooldown = 30;
-    int playerHP = 5;
+    int maxHP = 3;
+    int playerHP = maxHP;
     int invincibleTimer = 0;
     int invincibleCooldown = 60;
     int score = 0;
@@ -176,7 +177,7 @@ int main() {
 
             // HP bar
             DrawText("HP:", 10, 10, 24, DARKGRAY);
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < maxHP; i++) {
                 Color hpColor = (i < playerHP) ? RED : LIGHTGRAY;
                 DrawCircle(70 + i * 35, 22, 12, hpColor);
             }
