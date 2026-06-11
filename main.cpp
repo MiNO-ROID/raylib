@@ -29,8 +29,8 @@ int main() {
     int idleFrameWidth   = warriorIdleTex.width / 8;   // 8 idle frames
     int attackFrameWidth = warriorAttackTex.width / 4;  // 4 attack frames
     int frameHeight      = warriorIdleTex.height;
-    int drawSize         = 200;  // rendered size of the sprite
-    int drawOffset       = drawSize / 2;  // = 100, centers the sprite on ballPosition
+    int drawSize         = 200;
+    int drawOffset       = drawSize / 2;  // 100 — centers sprite on ballPosition
 
     int currentFrame = 0;
     int frameTimer   = 0;
@@ -41,7 +41,7 @@ int main() {
     int  slashFrame      = 0;
     int  slashTimer      = 0;
     int  slashFrameSpeed = 5;
-    float slashRange     = 100.0f;
+    float slashRange     = 45.0f;  // tight melee range — bullets fire at anything beyond this
 
     Bullet bullets[MAX_BULLETS] = {};
     Enemy  enemies[MAX_ENEMIES] = {};
@@ -77,7 +77,7 @@ int main() {
                             isSlashing = true;
                             slashFrame = 0;
                             slashTimer = 0;
-                            shootTimer = 0; // reset so shooting doesn't fire right after slash
+                            shootTimer = 0;
                             break;
                         }
                     }
@@ -91,7 +91,7 @@ int main() {
                     slashTimer = 0;
                     slashFrame++;
 
-                    // On frame 2 (midpoint of swing) — deal damage to all enemies in range
+                    // Deal damage on frame 2 (midpoint of swing)
                     if (slashFrame == 2) {
                         for (int i = 0; i < MAX_ENEMIES; i++) {
                             if (enemies[i].active) {
@@ -263,12 +263,11 @@ int main() {
         ClearBackground(RAYWHITE);
 
         if (!gameOver) {
-            // Debug slash range circle — remove this line when done
+            // Debug slash range circle — remove when happy with it
             DrawCircleLines((int)ballPosition.x, (int)ballPosition.y, slashRange, BLUE);
 
             Color tint = (invincibleTimer > 0 && (invincibleTimer / 6) % 2 == 0) ? RED : WHITE;
 
-            // FIX: use drawOffset (100) so sprite is centered on ballPosition
             if (isSlashing) {
                 Rectangle srcRect  = {(float)(slashFrame * attackFrameWidth), 0, (float)attackFrameWidth, (float)frameHeight};
                 Rectangle destRect = {ballPosition.x - drawOffset, ballPosition.y - drawOffset, (float)drawSize, (float)drawSize};
