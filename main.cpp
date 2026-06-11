@@ -57,7 +57,7 @@ int main() {
             if (IsKeyDown(KEY_S)) ballPosition.y += 4.0f;
             if (IsKeyDown(KEY_W)) ballPosition.y -= 4.0f;
 
-            // SLASH: trigger when any enemy enters melee range
+            // SLASH
             if (!isSlashing) {
                 for (int i = 0; i < MAX_ENEMIES; i++) {
                     if (enemies[i].active) {
@@ -74,7 +74,7 @@ int main() {
                 }
             }
 
-            // Advance slash animation
+            // slash animation
             if (isSlashing) {
                 slashTimer++;
                 if (slashTimer >= slashFrameSpeed) {
@@ -114,7 +114,7 @@ int main() {
                     currentFrame = (currentFrame + 1) % 8;
                 }
             }
-
+ 
             // Spawn enemy
             spawnTimer++;
             if (spawnTimer >= spawnCooldown) {
