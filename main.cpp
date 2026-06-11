@@ -22,6 +22,14 @@ int main() {
     Vector2 ballPosition = {(float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2};
     SetTargetFPS(60);
 
+    // Load warrior sprite sheet
+    Texture2D warriorTex = LoadTexture("pack 1/Units/Blue Units/Warrior/Warrior_Idle.png");
+    int frameWidth = warriorTex.width / 8;  // 8 frames in idle sheet
+    int frameHeight = warriorTex.height;
+    int currentFrame = 0;
+    int frameTimer = 0;
+    int frameSpeed = 8; // frames per animation frame (lower = faster)
+
     Bullet bullets[MAX_BULLETS] = {};
     Enemy enemies[MAX_ENEMIES] = {};
 
@@ -45,13 +53,18 @@ int main() {
             if (IsKeyDown(KEY_S)) ballPosition.y += 4.0f;
             if (IsKeyDown(KEY_W)) ballPosition.y -= 4.0f;
 
-            // Auto shoot
+            // Animate sprite
+            frameTimer++;
+            if (frameTimer >= frameSpeed) {
+                frameTimer = 0;
+                currentFrame = (currentFrame + 1) % 8;
+            }
+
+            // Auto shoot toward nearest enemy
             shootTimer++;
             if (shootTimer >= shootCooldown) {
-
-                // Find nearest enemy
                 int nearestIndex = -1;
-                float nearestDist = 150.0f; // detection range
+                float nearestDist = 9999.0f;
 
                 for (int i = 0; i < MAX_ENEMIES; i++) {
                     if (enemies[i].active) {
@@ -65,7 +78,6 @@ int main() {
                     }
                 }
 
-                // Only shoot if enemy found in range
                 if (nearestIndex != -1) {
                     shootTimer = 0;
                     float dx = enemies[nearestIndex].position.x - ballPosition.x;
@@ -171,20 +183,24 @@ int main() {
                 invincibleTimer = 0;
                 spawnTimer = 0;
                 shootTimer = 0;
+                currentFrame = 0;
+                frameTimer = 0;
                 gameOver = false;
                 for (int i = 0; i < MAX_ENEMIES; i++) enemies[i].active = false;
                 for (int i = 0; i < MAX_BULLETS; i++) bullets[i].active = false;
             }
         }
 
-        // DRAW
+        // ---- DRAW ----
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
         if (!gameOver) {
-            // Player
-            Color playerColor = (invincibleTimer > 0 && (invincibleTimer / 6) % 2 == 0) ? RED : BLUE;
-            DrawCircleV(ballPosition, 40, playerColor);
+            // Draw animated warrior sprite
+            Rectangle srcRect = {(float)(currentFrame * frameWidth), 0, (float)frameWidth, (float)frameHeight};
+            Rectangle destRect = {ballPosition.x - 40, ballPosition.y - 40, 80, 80};
+            Color tint = (invincibleTimer > 0 && (invincibleTimer / 6) % 2 == 0) ? RED : WHITE;
+            DrawTexturePro(warriorTex, srcRect, destRect, {0, 0}, 0.0f, tint);
 
             // Enemies
             for (int i = 0; i < MAX_ENEMIES; i++) {
@@ -220,6 +236,8 @@ int main() {
 
         EndDrawing();
     }
+
+    UnloadTexture(warriorTex);
     CloseWindow();
     return 0;
 }
